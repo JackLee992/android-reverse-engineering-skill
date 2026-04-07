@@ -35,6 +35,27 @@ Inside Claude Code, run:
 
 The skill will be permanently available in all future sessions.
 
+### In Codex
+
+The repository root is a Claude plugin, so it is not directly installable as a Codex skill without adaptation.
+
+This fork includes a Codex-compatible package at:
+
+```text
+codex-skills/android-reverse-engineering
+```
+
+Install it with Codex's bundled skill installer:
+
+```bash
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
+  --repo JackLee992/android-reverse-engineering-skill \
+  --ref master \
+  --path codex-skills/android-reverse-engineering
+```
+
+After installation, restart Codex to pick up the new skill.
+
 ### From a local clone
 
 ```bash
