@@ -4,6 +4,14 @@
 # The install-dep.sh script can install each one.
 set -euo pipefail
 
+# Prefer Homebrew's Java 17 when it is available. This avoids older inherited
+# JAVA_HOME values breaking CLI wrappers such as jadx and vineflower.
+PREFERRED_JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+if [[ -x "$PREFERRED_JAVA_HOME/bin/java" ]]; then
+  export JAVA_HOME="$PREFERRED_JAVA_HOME"
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi
+
 REQUIRED_JAVA_MAJOR=17
 errors=0
 missing_required=()

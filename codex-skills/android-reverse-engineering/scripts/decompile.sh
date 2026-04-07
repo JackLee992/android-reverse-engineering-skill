@@ -2,6 +2,14 @@
 # decompile.sh — Decompile APK/JAR/AAR using jadx, fernflower, or both
 set -euo pipefail
 
+# Prefer Homebrew's Java 17 when it is available. This prevents Homebrew's
+# decompiler wrappers from picking up an older inherited JAVA_HOME.
+PREFERRED_JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+if [[ -x "$PREFERRED_JAVA_HOME/bin/java" ]]; then
+  export JAVA_HOME="$PREFERRED_JAVA_HOME"
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi
+
 usage() {
   cat <<EOF
 Usage: decompile.sh [OPTIONS] <file>
@@ -140,7 +148,9 @@ find_fernflower_jar() {
     "$HOME/fernflower/build/libs/fernflower.jar" \
     "$HOME/vineflower/build/libs/vineflower.jar" \
     "$HOME/fernflower/fernflower.jar" \
-    "$HOME/vineflower/vineflower.jar"; do
+    "$HOME/vineflower/vineflower.jar" \
+    "/opt/homebrew/opt/vineflower/libexec/vineflower.jar" \
+    "/usr/local/opt/vineflower/libexec/vineflower.jar"; do
     if [[ -f "$candidate" ]]; then
       echo "$candidate"
       return
@@ -235,7 +245,8 @@ run_fernflower() {
   echo "Running: java -jar $ff_jar ${ff_args[*]}"
   java -jar "$ff_jar" "${ff_args[@]}"
 
-  # Fernflower outputs a JAR containing .java files — extract it
+  # Some Fernflower/Vineflower builds emit a JAR that contains .java files,
+  # while newer builds write the .java files directly into the output folder.
   local result_jar="$out_dir/$(basename "$jar_to_decompile")"
   if [[ -f "$result_jar" ]]; then
     local sources_dir="$out_dir/sources"
@@ -245,6 +256,11 @@ run_fernflower() {
     echo "Fernflower output: $sources_dir/"
     local count
     count=$(find "$sources_dir" -name "*.java" | wc -l)
+    echo "Java files decompiled by Fernflower: $count"
+  elif find "$out_dir" -name "*.java" -print -quit | grep -q .; then
+    echo "Fernflower output: $out_dir/"
+    local count
+    count=$(find "$out_dir" -name "*.java" | wc -l)
     echo "Java files decompiled by Fernflower: $count"
   fi
 
@@ -289,7 +305,11 @@ decompile_single() {
       ;;
     fernflower)
       run_fernflower "$out_dir"
-      print_structure "$out_dir/sources" "fernflower"
+      if [[ -d "$out_dir/sources" ]]; then
+        print_structure "$out_dir/sources" "fernflower"
+      else
+        print_structure "$out_dir" "fernflower"
+      fi
       ;;
     both)
       echo "--- Pass 1: jadx ---"
@@ -299,16 +319,24 @@ decompile_single() {
       run_fernflower "$out_dir/fernflower"
 
       print_structure "$out_dir/jadx/sources" "jadx"
-      print_structure "$out_dir/fernflower/sources" "fernflower"
+      if [[ -d "$out_dir/fernflower/sources" ]]; then
+        print_structure "$out_dir/fernflower/sources" "fernflower"
+      else
+        print_structure "$out_dir/fernflower" "fernflower"
+      fi
 
       echo
       echo "=== Comparison ==="
       local jadx_count=0 ff_count=0
+      local ff_src_dir="$out_dir/fernflower/sources"
       if [[ -d "$out_dir/jadx/sources" ]]; then
         jadx_count=$(find "$out_dir/jadx/sources" -name "*.java" | wc -l)
       fi
-      if [[ -d "$out_dir/fernflower/sources" ]]; then
-        ff_count=$(find "$out_dir/fernflower/sources" -name "*.java" | wc -l)
+      if [[ ! -d "$ff_src_dir" ]] && find "$out_dir/fernflower" -name "*.java" -print -quit | grep -q .; then
+        ff_src_dir="$out_dir/fernflower"
+      fi
+      if [[ -d "$ff_src_dir" ]]; then
+        ff_count=$(find "$ff_src_dir" -name "*.java" | wc -l)
       fi
       echo "jadx:        $jadx_count Java files"
       echo "Fernflower:  $ff_count Java files"
