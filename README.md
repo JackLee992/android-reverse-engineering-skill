@@ -9,6 +9,9 @@ A Claude Code skill that decompiles Android APK/XAPK/JAR/AAR files and **extract
 - **Traces call flows** from Activities/Fragments through ViewModels and repositories down to HTTP calls
 - **Analyzes** app structure: manifest, packages, architecture patterns
 - **Handles obfuscated code**: strategies for navigating ProGuard/R8 output
+- **Optionally dumps runtime DEX** with Frida when protected code only appears in memory
+- **Optionally traces native `.so` activity** with load and JNI registration probes
+- **Optionally hands off native analysis into IDA Pro** through `ida-pro-mcp`
 
 ## Requirements
 
@@ -19,6 +22,11 @@ A Claude Code skill that decompiles Android APK/XAPK/JAR/AAR files and **extract
 **Optional (recommended):**
 - [Vineflower](https://github.com/Vineflower/vineflower) or [Fernflower](https://github.com/JetBrains/fernflower) — better output on complex Java code
 - [dex2jar](https://github.com/pxb1988/dex2jar) — needed to use Fernflower on APK/DEX files
+
+**Optional for dynamic analysis:**
+- [Frida](https://www.frida.re/) host tooling and matching device-side `frida-server`
+- `adb`
+- [ida-pro-mcp](https://github.com/mrexodia/ida-pro-mcp) for IDA Pro handoff
 
 See `plugins/android-reverse-engineering/skills/android-reverse-engineering/references/setup-guide.md` for detailed installation instructions.
 
@@ -55,6 +63,30 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 ```
 
 After installation, restart Codex to pick up the new skill.
+
+## Dynamic Runtime Add-ons
+
+The Codex package also includes optional runtime-analysis helpers.
+
+```bash
+# Check Frida/ADB/IDA MCP prerequisites
+bash ~/.codex/skills/android-reverse-engineering/scripts/check-dynamic-deps.sh
+
+# Dump runtime DEX files
+bash ~/.codex/skills/android-reverse-engineering/scripts/run-frida-dexdump.sh \
+  --package com.example.app \
+  --output-dir output/runtime-dex
+
+# Trace runtime native loads
+bash ~/.codex/skills/android-reverse-engineering/scripts/run-frida-trace-loads.sh \
+  --package com.example.app \
+  --output output/native-loads.jsonl
+
+# Trace JNI registrations
+bash ~/.codex/skills/android-reverse-engineering/scripts/run-frida-trace-jni.sh \
+  --package com.example.app \
+  --output output/jni-trace.jsonl
+```
 
 ### From a local clone
 
@@ -137,12 +169,20 @@ android-reverse-engineering-skill/
 │       │       │   ├── jadx-usage.md
 │       │       │   ├── fernflower-usage.md
 │       │       │   ├── api-extraction-patterns.md
-│       │       │   └── call-flow-analysis.md
+│       │       │   ├── call-flow-analysis.md
+│       │       │   ├── frida-setup.md
+│       │       │   ├── dynamic-dex-unpack.md
+│       │       │   ├── native-so-tracing.md
+│       │       │   └── ida-pro-mcp.md
 │       │       └── scripts/
 │       │           ├── check-deps.sh
 │       │           ├── install-dep.sh
 │       │           ├── decompile.sh
-│       │           └── find-api-calls.sh
+│       │           ├── find-api-calls.sh
+│       │           ├── check-dynamic-deps.sh
+│       │           ├── run-frida-dexdump.sh
+│       │           ├── run-frida-trace-loads.sh
+│       │           └── run-frida-trace-jni.sh
 │       └── commands/
 │           └── decompile.md                # /decompile slash command
 ├── LICENSE
@@ -156,6 +196,8 @@ android-reverse-engineering-skill/
 - [Vineflower — Fernflower community fork](https://github.com/Vineflower/vineflower)
 - [dex2jar — DEX to JAR converter](https://github.com/pxb1988/dex2jar)
 - [apktool — Android resource decoder](https://apktool.org/)
+- [dstmath/frida-unpack](https://github.com/dstmath/frida-unpack)
+- [mrexodia/ida-pro-mcp](https://github.com/mrexodia/ida-pro-mcp)
 
 ## Disclaimer
 

@@ -1,6 +1,6 @@
 ---
 name: android-reverse-engineering
-description: Use when the user wants to decompile an Android APK, XAPK, JAR, or AAR, inspect obfuscated Android code, extract HTTP APIs such as Retrofit or OkHttp endpoints, or trace call flows from UI code down to the network layer without access to the original source.
+description: Use when the user wants to decompile an Android APK, XAPK, JAR, or AAR, inspect obfuscated Android code, extract HTTP APIs, dump runtime DEX files with Frida, trace native library or JNI activity, or hand off Android `.so` analysis into IDA Pro through MCP.
 ---
 
 # Android Reverse Engineering
@@ -19,7 +19,7 @@ That is the default destination used by the bundled Codex skill installer. Use t
 
 ## Prerequisites
 
-This skill requires **Java JDK 17+** and **jadx** to be installed. **Fernflower/Vineflower** and **dex2jar** are optional but recommended for better decompilation quality. Run the dependency checker to verify:
+This skill requires **Java JDK 17+** and **jadx** to be installed for the static pipeline. **Fernflower/Vineflower** and **dex2jar** are optional but recommended for better decompilation quality. Run the dependency checker to verify:
 
 ```bash
 bash "$HOME/.codex/skills/android-reverse-engineering/scripts/check-deps.sh"
@@ -29,6 +29,18 @@ If anything is missing, follow the installation instructions in:
 
 ```text
 $HOME/.codex/skills/android-reverse-engineering/references/setup-guide.md
+```
+
+For dynamic runtime analysis, also verify the Frida/ADB host environment:
+
+```bash
+bash "$HOME/.codex/skills/android-reverse-engineering/scripts/check-dynamic-deps.sh"
+```
+
+See:
+
+```text
+$HOME/.codex/skills/android-reverse-engineering/references/frida-setup.md
 ```
 
 ## Workflow
@@ -192,6 +204,59 @@ See:
 $HOME/.codex/skills/android-reverse-engineering/references/api-extraction-patterns.md
 ```
 
+### Phase 6: Dynamic Runtime Analysis (optional)
+
+Use this branch when the app uses packers, runtime DEX loading, heavy JNI bridges, or important native `.so` logic that is not obvious from the static output.
+
+**Runtime DEX dump**:
+
+```bash
+bash "$HOME/.codex/skills/android-reverse-engineering/scripts/run-frida-dexdump.sh" \
+  --package com.example.app \
+  --output-dir output/runtime-dex
+```
+
+**Trace native library loads**:
+
+```bash
+bash "$HOME/.codex/skills/android-reverse-engineering/scripts/run-frida-trace-loads.sh" \
+  --package com.example.app \
+  --output output/native-loads.jsonl
+```
+
+**Trace JNI registrations**:
+
+```bash
+bash "$HOME/.codex/skills/android-reverse-engineering/scripts/run-frida-trace-jni.sh" \
+  --package com.example.app \
+  --output output/jni-trace.jsonl
+```
+
+Use the resulting artifacts to answer questions such as:
+
+- Which DEX files only exist in memory after startup?
+- Which `.so` files load when a specific feature is exercised?
+- Which native function offsets back a given Java `native` method?
+
+See:
+
+```text
+$HOME/.codex/skills/android-reverse-engineering/references/dynamic-dex-unpack.md
+$HOME/.codex/skills/android-reverse-engineering/references/native-so-tracing.md
+```
+
+### Phase 7: IDA Pro MCP Handoff (optional)
+
+Use this branch when the native trace identifies a specific `.so` and you want Codex to analyze it inside IDA Pro through MCP.
+
+Install and configure `ida-pro-mcp`, open the target binary in IDA, and then ask Codex to use IDA MCP against the offsets or functions that appeared in your Frida traces.
+
+See:
+
+```text
+$HOME/.codex/skills/android-reverse-engineering/references/ida-pro-mcp.md
+```
+
 ## Output
 
 At the end of the workflow, deliver:
@@ -200,6 +265,7 @@ At the end of the workflow, deliver:
 2. An architecture summary covering app structure, main packages, and pattern used
 3. API documentation for all discovered endpoints
 4. A call-flow map for key paths from UI to network, especially authentication and main features
+5. Optional runtime artifacts such as dumped DEX files, native load traces, and JNI registration traces
 
 ## References
 
@@ -208,3 +274,7 @@ At the end of the workflow, deliver:
 - `$HOME/.codex/skills/android-reverse-engineering/references/fernflower-usage.md`
 - `$HOME/.codex/skills/android-reverse-engineering/references/api-extraction-patterns.md`
 - `$HOME/.codex/skills/android-reverse-engineering/references/call-flow-analysis.md`
+- `$HOME/.codex/skills/android-reverse-engineering/references/frida-setup.md`
+- `$HOME/.codex/skills/android-reverse-engineering/references/dynamic-dex-unpack.md`
+- `$HOME/.codex/skills/android-reverse-engineering/references/native-so-tracing.md`
+- `$HOME/.codex/skills/android-reverse-engineering/references/ida-pro-mcp.md`

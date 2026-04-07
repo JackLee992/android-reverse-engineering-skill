@@ -19,6 +19,22 @@ python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-githu
 
 After installing, restart Codex so the new skill is discovered.
 
+## Optional Dynamic Add-ons
+
+The Codex package also ships optional Frida and IDA MCP helpers under:
+
+```text
+$HOME/.codex/skills/android-reverse-engineering/scripts/
+```
+
+Check the dynamic environment with:
+
+```bash
+bash ~/.codex/skills/android-reverse-engineering/scripts/check-dynamic-deps.sh
+```
+
+`ida-pro-mcp` remains an external companion project. The skill documents how to install and use it, but does not vendor the MCP server itself.
+
 ## Why this exists
 
 The upstream skill relies on Claude plugin conventions such as:
